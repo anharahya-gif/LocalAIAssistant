@@ -1,5 +1,5 @@
 {
-  "name": "ai-assistant",
+  "name": "local-ai-assistant",
   "version": "1.0.0",
   "description": "Personal AI Assistant powered by Gemma 4 12B via Ollama",
   "main": "main.js",
