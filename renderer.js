@@ -533,6 +533,128 @@ function showConfirmModal(message, onConfirm) {
   };
 }
 
+function searchFilesRecursively(query) {
+  const matches = [];
+  
+  // Daftar folder default jika tidak mendeteksi path kustom
+  let searchDirs = [
+    __dirname,
+    path.join(os.homedir(), 'Downloads'),
+    path.join(os.homedir(), 'Documents'),
+    path.join(os.homedir(), 'Desktop'),
+    path.join(os.homedir(), 'Videos')
+  ];
+  let searchTerm = query.trim();
+
+  // 1. Cek jika query adalah path absolut langsung yang ada di disk
+  try {
+    if (fs.existsSync(searchTerm)) {
+      const stats = fs.statSync(searchTerm);
+      if (stats.isFile()) {
+        matches.push({ name: path.basename(searchTerm), path: searchTerm });
+      } else if (stats.isDirectory()) {
+        searchDirs = [searchTerm];
+        searchTerm = ''; // Cari semua file di dalam folder tersebut
+      }
+    } else {
+      // 2. Cek apakah query mengandung path (misal: D:\Anime\Spy x Family atau D:\Anime)
+      const hasPath = searchTerm.includes('\\') || searchTerm.includes('/');
+      if (hasPath) {
+        // Cari folder terdekat yang valid dari string query
+        const separator = searchTerm.includes('\\') ? '\\' : '/';
+        const parts = searchTerm.split(/[\\/]/);
+        
+        for (let i = parts.length - 1; i > 0; i--) {
+          const testPath = parts.slice(0, i).join(separator);
+          if (testPath && fs.existsSync(testPath)) {
+            const stats = fs.statSync(testPath);
+            if (stats.isDirectory()) {
+              searchDirs = [testPath];
+              searchTerm = parts.slice(i).join(' ').trim();
+              break;
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error saat mendeteksi path pencarian:', err);
+  }
+
+  const queryLower = searchTerm.toLowerCase();
+
+  function traverse(dir) {
+    try {
+      if (!fs.existsSync(dir)) return;
+      const files = fs.readdirSync(dir);
+      for (const file of files) {
+        const fullPath = path.join(dir, file);
+        
+        // Cek direktori yang diabaikan
+        if (file === 'node_modules' || file === '.git' || file === 'dist' || file === 'out' || file === 'build' || file === 'AppData' || file === 'Microsoft') {
+          continue;
+        }
+
+        let stats;
+        try {
+          stats = fs.statSync(fullPath);
+        } catch (e) {
+          continue;
+        }
+
+        if (stats.isDirectory()) {
+          // Batasi kedalaman pencarian folder luar proyek agar tidak overload (maksimal 5 level)
+          const depth = fullPath.split(path.sep).length;
+          const startDepth = dir.split(path.sep).length;
+          if (depth - startDepth > 5) {
+            continue;
+          }
+          traverse(fullPath);
+        } else if (stats.isFile()) {
+          // Jika searchTerm kosong, masukkan semua file (kasus browse folder)
+          if (!queryLower || file.toLowerCase().includes(queryLower)) {
+            matches.push({ name: file, path: fullPath });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error saat menjelajahi folder:', dir, err);
+    }
+  }
+
+  // Jalankan pencarian jika matches belum terisi langsung (kasus file eksis langsung)
+  if (matches.length === 0) {
+    searchDirs.forEach(dir => {
+      traverse(dir);
+    });
+  }
+
+  const session = getCurrentSession();
+  if (!session) return;
+
+  let feedback = '';
+  if (matches.length > 0) {
+    const limitedMatches = matches.slice(0, 15);
+    feedback = `[SYSTEM] Hasil pencarian file dengan kata kunci "${query}" di komputer:\n\n` + 
+      limitedMatches.map((m, idx) => `${idx + 1}. \`${m.path}\``).join('\n') + 
+      (matches.length > 15 ? `\n\n...dan ${matches.length - 15} file lainnya.` : '') +
+      `\n\nSilakan tunjukkan hasil di atas ke Tuan Anhar dan tanyakan apakah dia ingin membaca file tersebut (gunakan [EXECUTE: read_file <path>]) atau membuka foldernya (gunakan [EXECUTE: open_folder <path_folder>]).`;
+  } else {
+    feedback = `[SYSTEM] Pencarian selesai. Tidak ditemukan file yang cocok dengan kata kunci "${query}" di folder komputer Tuan Anhar.\nSilakan beritahukan hasil ini kepada Tuan Anhar.`;
+  }
+
+  session.messages.push({
+    role: 'user',
+    content: feedback
+  });
+  saveSessionsToStorage();
+
+  // Picu completion secara otomatis setelah jeda singkat
+  setTimeout(() => {
+    generateAIResponseForSession(session, currentSessionId);
+  }, 800);
+}
+
 function abortOngoingGeneration() {
   if (isGenerating && abortController) {
     try {
@@ -734,6 +856,28 @@ async function generateAIResponseForSession(session, sessionIdAtStart) {
       }
 
       accumulatedResponse += chunk;
+
+      // Intersepsi perintah [EXECUTE: ...] dari stream agar model tidak berhalusinasi hasilnya
+      const executeMatch = accumulatedResponse.match(/\[EXECUTE:\s*[^\]]+\]/);
+      if (executeMatch) {
+        const commandText = executeMatch[0];
+        const textBeforeCommand = accumulatedResponse.substring(0, accumulatedResponse.indexOf(commandText)).trim();
+        
+        if (aiMessageBubble) {
+          aiMessageBubble.innerHTML = marked.parse(textBeforeCommand || "Mengeksekusi perintah...");
+        }
+        scrollToBottom();
+
+        // Hentikan proses streaming seketika
+        abortController.abort();
+        isGenerating = false;
+        updateSendButtonState();
+
+        // Jalankan perintah nyata di sistem
+        handleJarvisAutomation(commandText);
+        return;
+      }
+
       if (isJarvisMode) {
         const cleanChunk = accumulatedResponse.replace(/\[EXECUTE: [^\]]+\]/g, "");
         setHudState('thinking', cleanChunk);
@@ -875,7 +1019,11 @@ If Tuan Anhar requests any of the following actions, append the exact execution 
 - Check CPU/RAM computer hardware info: [EXECUTE: system_info]
 - Open folder/directory in File Explorer: [EXECUTE: open_folder <path>] (e.g. [EXECUTE: open_folder D:\\AI-Assistant])
 - Read text file content: [EXECUTE: read_file <path>] (e.g. [EXECUTE: read_file C:\\projects\\main.js])
-Do not explain the command execution, simply state that you are doing it.`;
+- Search files/folders on the computer: [EXECUTE: search_files <query>] (e.g. [EXECUTE: search_files spy x family])
+Do not explain the command execution, simply state that you are doing it.
+
+CRITICAL INSTRUCTION FOR SEARCHING:
+If Tuan Anhar asks you to search, find, or look for any file, folder, document, video, or anime "di komputer ini" (on this computer), you MUST use [EXECUTE: search_files <query>] where <query> is the name of the file or anime. Do NOT use [EXECUTE: browser] or open Google unless he explicitly mentions searching the web or Google.`;
 
   const finalSystemPrompt = (isJarvisMode ? nadiaSystemPrompt : settings.systemPrompt) + commandsPrompt;
 
@@ -1456,6 +1604,15 @@ function handleJarvisAutomation(text) {
         speakText('Gagal membaca file, terjadi kesalahan.');
         appendSystemInfoMessage(`❌ Gagal membaca file: ${err.message}\nPath: \`${filePath}\``);
       }
+    }
+
+    // Cek perintah cari file kustom
+    const searchFilesMatch = text.match(/\[EXECUTE: search_files\s+([^\]]+)\]/);
+    if (searchFilesMatch) {
+      const query = searchFilesMatch[1].trim();
+      speakText('Melaksanakan, mencari file.');
+      appendSystemInfoMessage(`🔍 Mencari file dengan kata kunci: "${query}"...`);
+      searchFilesRecursively(query);
     }
   }
 }
