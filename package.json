@@ -1,0 +1,19 @@
+{
+  "name": "ai-assistant",
+  "version": "1.0.0",
+  "description": "Personal AI Assistant powered by Gemma 4 12B via Ollama",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "Anhar",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^36.4.0"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1",
+    "marked": "^18.0.5"
+  }
+}

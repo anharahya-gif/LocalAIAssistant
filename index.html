@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="node_modules/highlight.js/styles/github-dark.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Title Bar -->
+  <div class="titlebar" id="titlebar">
+    <div class="titlebar-left">
+      <div class="app-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="url(#grad1)" stroke-width="2"/>
+          <path d="M8 12h8M12 8v8" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#3b82f6"/>
+              <stop offset="100%" style="stop-color:#38bdf8"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="app-title">AI Assistant</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="ctrl-btn minimize" id="btn-minimize" title="Minimize">&#8722;</button>
+      <button class="ctrl-btn maximize" id="btn-maximize" title="Maximize">&#9633;</button>
+      <button class="ctrl-btn close" id="btn-close" title="Close">&#10005;</button>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <button class="new-chat-btn" id="btn-new-chat">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+        </svg>
+        Chat Baru
+      </button>
+
+      <button class="jarvis-toggle-btn" id="btn-jarvis-toggle" title="Aktifkan Mode Nadia">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 8v8M8 12h8" />
+        </svg>
+        Mode Nadia
+      </button>
+
+      <div class="sidebar-section-label">Riwayat</div>
+      <div class="chat-history" id="chat-history">
+        <!-- Dinamis -->
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="model-indicator">
+          <div class="model-dot"></div>
+          <span id="model-name">gemma4:12b</span>
+        </div>
+        <button class="settings-btn" id="btn-settings" title="Pengaturan">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Chat Area -->
+    <main class="chat-area">
+
+      <!-- Chat Header -->
+      <div class="chat-header" id="chat-header" style="display: none;">
+        <div class="chat-header-title" id="chat-header-title">Chat Baru</div>
+        <div class="chat-header-actions">
+          <div class="export-dropdown-container">
+            <button class="header-btn" id="btn-export" title="Ekspor Chat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              Ekspor
+            </button>
+            <div class="export-dropdown" id="export-dropdown">
+              <button class="dropdown-item" id="btn-export-txt">
+                📄 Teks (.txt)
+              </button>
+              <button class="dropdown-item" id="btn-export-pdf">
+                📕 PDF (.pdf)
+              </button>
+            </div>
+          </div>
+          <button class="header-btn delete-chat" id="btn-delete-chat" title="Hapus Percakapan Ini">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <line x1="10" y1="11" x2="10" y2="17"/>
+              <line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+            Hapus Chat
+          </button>
+        </div>
+      </div>
+
+      <!-- Welcome Screen -->
+      <div class="welcome-screen" id="welcome-screen">
+        <div class="aurora aurora-1"></div>
+        <div class="aurora aurora-2"></div>
+        <div class="aurora aurora-3"></div>
+        <div class="welcome-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="url(#wg)" stroke-width="1.5"/>
+            <path d="M8 12h8M12 8v8" stroke="url(#wg)" stroke-width="1.5" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#3b82f6"/>
+                <stop offset="100%" style="stop-color:#38bdf8"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="welcome-title">Halo, Anhar! 👋</h1>
+        <p class="welcome-sub">AI Asisten pribadimu siap membantu. Tanya apa saja!</p>
+        <div class="suggestion-chips">
+          <button class="chip" data-text="Apa yang bisa kamu lakukan?">🤔 Apa yang bisa kamu lakukan?</button>
+          <button class="chip" data-text="Buatkan saya kode JavaScript sederhana">💻 Buatkan kode JavaScript</button>
+          <button class="chip" data-text="Jelaskan cara kerja AI secara sederhana">🧠 Jelaskan cara kerja AI</button>
+          <button class="chip" data-text="Bantu saya membuat rencana belajar pemrograman">📚 Rencana belajar programming</button>
+        </div>
+      </div>
+
+      <!-- JARVIS HUD Visualizer -->
+      <div class="jarvis-hud-container" id="jarvis-hud-container" style="display: none;">
+        <div class="hud-circle-container">
+          <div class="hud-circle-outer"></div>
+          <div class="hud-circle-mid"></div>
+          <div class="hud-circle-inner">
+            <svg class="hud-waveform" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" fill="none" stroke="url(#hud-grad)" stroke-width="2" stroke-dasharray="8 6 12 6" />
+              <circle cx="50" cy="50" r="28" fill="none" stroke="url(#hud-grad)" stroke-width="1.5" stroke-dasharray="4 4" />
+              <defs>
+                <linearGradient id="hud-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#38bdf8;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="hud-status" id="hud-status">STANDBY</div>
+          </div>
+        </div>
+        <div class="hud-transcript" id="hud-transcript">Nadia siap, Tuan.</div>
+        <div class="hud-subtext" id="hud-subtext">Nadia v1.0.0 &bull; Offline Mode</div>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages" id="messages"></div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-box">
+          <button class="input-action-btn voice-input-btn" id="btn-voice-input" title="Mulai Bicara">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+            </svg>
+          </button>
+          <button class="input-action-btn voice-output-btn" id="btn-voice-output" title="Suara Respons: Aktif">
+            <svg class="icon-unmuted" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <svg class="icon-muted" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          </button>
+          <textarea
+            id="user-input"
+            placeholder="Ketik pesanmu di sini... (Enter untuk kirim, Shift+Enter untuk baris baru)"
+            rows="1"
+          ></textarea>
+          <button class="send-btn" id="btn-send" title="Kirim">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <p class="input-hint">Powered by <strong>Gemma 4 12B</strong> via Ollama &mdash; 100% lokal & privat 🔒</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Pengaturan</h2>
+        <button class="modal-close" id="modal-close">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label>Model Ollama</label>
+          <select id="select-model">
+            <option value="gemma4:12b">gemma4:12b</option>
+            <option value="gemma4:27b">gemma4:27b</option>
+            <option value="llama3.2">llama3.2</option>
+            <option value="mistral">mistral</option>
+          </select>
+        </div>
+        <div class="setting-group">
+          <label>Suara Asisten (TTS)</label>
+          <select id="select-voice">
+            <option value="">Default Sistem</option>
+          </select>
+        </div>
+        <div class="setting-group">
+          <label>Ollama API URL</label>
+          <input type="text" id="api-url" value="http://localhost:11434" />
+        </div>
+        <div class="setting-group">
+          <label>System Prompt</label>
+          <textarea id="system-prompt" rows="4">Kamu adalah AI asisten pribadi yang membantu, ramah, dan berbicara dalam Bahasa Indonesia. Kamu selalu memberikan jawaban yang jelas, akurat, dan berguna.</textarea>
+        </div>
+        <div class="setting-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-auto-start" />
+            Buka otomatis saat Windows dinyalakan
+          </label>
+        </div>
+        <button class="save-btn" id="btn-save-settings">Simpan Pengaturan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirm-modal-overlay">
+    <div class="modal confirm-modal">
+      <div class="modal-header">
+        <h2 id="confirm-modal-title">Konfirmasi</h2>
+        <button class="modal-close" id="confirm-modal-close">&#10005;</button>
+      </div>
+      <div class="modal-body" style="gap: 12px;">
+        <p id="confirm-modal-message" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;"></p>
+        <div class="confirm-modal-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+          <button class="header-btn" id="btn-confirm-cancel">Batal</button>
+          <button class="save-btn" id="btn-confirm-ok" style="background: linear-gradient(135deg, #ef4444, #f87171); padding: 8px 16px;">Hapus</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
